@@ -16,7 +16,7 @@
   Displays the 10 fastest cygwin hosts
 
 .NOTES
-  Version:        1.0
+  Version:        1.1
   Author:         J.D. Meek
   Creation Date:  01-03-2017
   Purpose/Change: Initial script development
@@ -25,32 +25,32 @@
   Get-FastestCygwin
 #>
 
-
-#---------------------------------------------------------[Initialisations]-------------------------------------------------------
-#Script Version
-$sScriptVersion = "1.0"
-
-#Set Error Action to Silently Continue
-$ErrorActionPreference = "SilentlyContinue"
-$progressPreference = 'silentlyContinue'
-
-
 <#--
+App Notes:
     Without switches, this script will determine the fastest Cygwin Mirror for your location.
     If you add the -install switch, it will download cygwin-setup-x64 and will start a manual installation.
     If you add the -install -silent switch, it will look for the cygwin-install.def file.  If not found, a
     basic install will be performed.
 
     http://cygwin.com/mirrors.html
-     system("cat mirrors.html | grep -A500 'Site list by region' | grep -B500 'Mirror Administrators' | sed -e s/\\ /\\\\n/g | sed -e s/\\,/\\\\n/g  > tmp.1");
-  system("cat tmp.1 | sed -e s/\\</\\\\n/g | grep href | grep -v 'rsync' | cut -f 2 -d \\\" | sort | uniq > cygwin_mirror.list ");
-
+    
+These are the original bash commands that spawned this.   
+    system("cat mirrors.html | grep -A500 'Site list by region' | grep -B500 'Mirror Administrators' | sed -e s/\\ /\\\\n/g | sed -e s/\\,/\\\\n/g  > tmp.1");
+    system("cat tmp.1 | sed -e s/\\</\\\\n/g | grep href | grep -v 'rsync' | cut -f 2 -d \\\" | sort | uniq > cygwin_mirror.list ");
 --#>
+
+
+#---------------------------------------------------------[Initialisations]-------------------------------------------------------
+
+
+#Set Error Action to Silently Continue
+$ErrorActionPreference = "SilentlyContinue"
+$ProgressPreference = 'SilentlyContinue'
 
 $Debug = 1
 
 $Results = @()
-$StartDir = (Get-Item -Path ".\" -Verbose).FullName
+$StartDir = Get-Location
 $WorkDir = "$Env:AppData\CygDiscover"
 
 if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64")
@@ -77,8 +77,8 @@ if (Test-Path $WorkDir) {
 New-Item $WorkDir -ItemType Directory
 Set-Location $WorkDir
 
-$Mirrors = Invoke-WebRequest http://cygwin.com/mirrors.html 
-$URLS = $Mirrors.Links | where {($_.innerHTML -Match 'com$|net$|org$') -AND ($_.href -NotMatch 'rsync:')} | Select outerText,href
+$Mirrors = Invoke-WebRequest -TimeoutSec 1 http://cygwin.com/mirrors.html 
+$URLS = $Mirrors.Links | where {($_.innerHTML -Match 'com$|net$|org$') -AND ($_.href -NotMatch 'rsync:|ftp:')} | Select outerText,href
 
 foreach ($BASE in $URLS)
      {
@@ -90,20 +90,20 @@ foreach ($BASE in $URLS)
      $Site = $BASE.href.split("/",4)
      $HostName = $Site[2]
 
-     Write-Host -NoNewline "Checking $HostName... " 
+     Write-Host -NoNewline -ForegroundColor Green "Checking $HostName... " 
      
      try 
-        { $Time = Measure-Command {$URITime = Invoke-WebRequest $URI} }
+        {
+	$Time = Measure-Command {$URITime = Invoke-WebRequest --TimeoutSec 1 $URI}
+	Write-Output -ForegroundColor Yellow $Time
+	}
         catch
         {
         if ($Debug) {
-            Write-Host -ForegroundColor Red "Failed!"
+            Write-Error -ForegroundColor Red "Failed!"
+	    $Time.Ticks = 10000
             }
-
-        Continue
         }
-
-     Write-Host $Time
 
      $TmpObj = New-Object PSObject 
      $TmpObj | Add-Member -type NoteProperty -Name HostName -Value $HostName
@@ -111,13 +111,11 @@ foreach ($BASE in $URLS)
      $TmpObj | Add-Member -type NoteProperty -Name Ticks -Value $Time.Ticks
 
      $Results += $TmpObj
-
      }
 
 $TopTen = $Results | Sort Ticks | Select -First 10
-$Fastest = $TopTen[0].HostName
 
-Write-Host "Fastest Host: $Fastest"
+Write-Host "Fastest Host: $TopTen[0].HostName"
 
 Write-Host "Would you like to fetch the latest installer and start using this host?"
 while("yes","no","y","n" -notcontains $answer)
@@ -158,7 +156,7 @@ Setup Command Line Options:
     $SetupFile="setup-$Arch.exe"
     $WorkSetup = "$Workdir\$SetupFile"
     Write-Host "Fetching Setup File."
-    Invoke-WebRequest "http://cygwin.org/$SetupFile" -OutFile $WorkSetup
+    Invoke-WebRequest --TimeoutSec 1 "http://cygwin.org/$SetupFile" -OutFile $WorkSetup
     Write-Host "Done...  Executing."
 
     $CygArgs = "--root $CygRoot --quiet-mode --upgrade-also --site $Fastest"
@@ -172,6 +170,7 @@ if ($ShowTopTen) {
 
 Set-Location $StartDir
 
+$ErrorActionPreference = "Continue"
 $progressPreference = 'Continue' 
 
-Exit
+exit 
