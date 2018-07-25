@@ -1,8 +1,6 @@
 # Administrivia
 Various tools, packages, HOWTOs and other goodies that I've written, modded or worked on in some way.  
 
-written in powershell...bash...python...perl...batch...
-
 Basically, this is a collection of stuffz that I've written over the years.  Some are good, 
 some are kinda meh, and some are really bad hax. But, all did the needful without completely trashing the system.  
 
