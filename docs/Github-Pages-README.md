@@ -5,10 +5,11 @@ Basically, this is a collection of stuffz that I've written over the years.  Som
 some are kinda meh, and some are really bad hax. But, all did the needful without completely trashing the system.  
 
 I tend to write these tools with a handful of directives in mind.  
-. Choice of programming language is driven by need
-. New!=Better
-. Every application contains at least one bug and can be optimized by at least one line.
-. Mind the Primary UNIX Directive
+
+- Choice of programming language is driven by need
+- New!=Better
+- Every application contains at least one bug and can be optimized by at least one line.
+- Mind the Primary UNIX Directive
 
 I bet you're wondering what this "primary Unix directive" is, unless you already know.  But, if not...
 
